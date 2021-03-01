@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>首页</title>
+    <script src="js/vue.min.js"></script>
+    <script src="js/axios.min.js"></script>
+    <style>
+        #J_app {
+            width: 800px;
+            margin: 0 auto;
+        }
+        p {
+           margin: 0;
+       }
+        .form {
+            display: flex;
+            justify-content: space-between;
+        }
+        .radio-item {
+            cursor: pointer;
+        }
+        .radio-item span{
+            position: relative;
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .radio-item span.actived{
+            border: 1px solid #00a;
+        }
+        .radio-item span.actived::before{
+            content: '';
+            position: absolute;
+            top: 1px;
+            left: 1px;
+            display: block;
+            width: 8px;
+            height: 8px;
+            background-color: #00a;
+            border-radius: 4px;
+        }
+        .switch-item{
+            position: relative;
+            display: block;
+            width: 50px;
+            height: 24px;
+            border-radius: 12px;
+            background-color: #eee;
+            border: 1px solid #eee;
+            cursor: pointer;
+            transition: all .3s;
+        }
+        .switch-item .switch-btn{
+            margin-top: 2px;
+            margin-left: 4px;
+            display: block;
+            height: 20px;
+            width: 20px;
+            border-radius: 10px;
+            background-color: #fff;
+            transition: all .3s;
+        }
+        .switch-item.right {
+            background-color: #00a;
+        }
+        .switch-item.right .switch-btn{
+            transform: translateX(22px);
+        }
+        .table {
+            margin-top: 40px;
+        }
+        .table p {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .table table *{
+            text-align: center;
+        }
+        .table table tbody tr td{
+            font-size: 14px;
+            width: 100px;
+        }
+        .table table tbody tr td input{
+            width: 100px;
+            box-sizing: border-box;
+        }
+        .table table tbody tr td a {
+            display: block;
+            text-decoration: none;
+            color: #333;
+        }
+        .logs {
+            margin-top: 40px;
+            width: 800px;
+            height: 250px;
+            border: 1px solid #ccc;
+            padding: 15px;
+            overflow: auto;
+            box-sizing: border-box;
+        }
+        .logs p {
+            color: #999;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="J_app">
+        <div class="form">
+            <div class="form-item">
+                <p>fee</p>
+                <input type="text" v-model="fee"><br>
+                <button @click="clickHandle">send transaction</button>
+            </div>
+            <div class="form-item">
+                <p>transaction fee allocation rules</p>
+                <div v-for="item in rulesList" :key="item.val" class="radio-item">
+                    <div @click="chooseItem(item)"><span :class="{actived: item.val === rule}"></span> {{ item.txt }}</div>
+                </div>   
+            </div>
+            <div class="form-item">
+                <p>transaction sorting switch</p>
+                <div class="switch-item" :class="{right: isSorting}" @click="switchToggle">
+                    <span class="switch-btn" ></span>
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 40px">
+            Frequency of Request(ms)：<input type="text" v-model.number="second"> <button @click="resetTimer">确认</button>
+        </div>
+        <div class="table">
+            <p>Ordering service capacity</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>name</th>
+                        <th>capacity</th>
+                        <th>fee reward</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="(item,index) in tableData">
+                        <td>
+                            <div>{{ item.orderer }}</div>
+                        </td>
+                        <td>
+                            <div v-if="!item.isEditing">{{ item.capacity }}</div>
+                            <input ref="ipt" v-else type="text" v-model="item.capacity" @keydown.enter="saveHandle(item, index)">
+                        </td>
+                        <td>
+                            <div>{{ item.fee }}</div>
+                        </td>
+                        <td>
+                            <a v-if="!item.isEditing" @click="editHandle(item, index)">修改</a>
+                            <a v-else @click="saveHandle(item, index)">保存</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <!-- <div ref="log" class="logs">
+            <p v-for="item in logs">{{ item.content }}</p>
+        </div> -->
+    </div>
+    <script>
+        (function(){
+            const $post = (url, data) => {
+                return axios.post(url, data).catch(err => {
+                    console.error(err)
+                })
+            }
+            const app = new Vue({
+                el: '#J_app',
+                data: {
+                    fee: '',
+                    rule: '',
+                    isSorting: false,
+                    second: 2000,
+                    rulesList: [
+                        {val: 1, txt: 'equal allocation'},
+                        {val: 0, txt: 'effort-based allocation'},
+                    ],
+                    tableData: [
+                        {
+                            orderer: 'orderer1',
+                            capacity: 100,
+                            fee: 100
+                        },{
+                            orderer: 'orderer2',
+                            capacity: 100,
+                            fee: 100
+                        },{
+                            orderer: 'orderer3',
+                            capacity: 100,
+                            fee: 100
+                        }
+                    ],
+                    logs: [],
+                    timer: null, // 定时器
+                },
+                methods: {
+                    // 初始化数据fee,rule,isSorting
+                    init() {
+                        this.resetTimer()
+                    },
+                    // 点击send事件
+                    clickHandle(){
+                        $post('/invoke', {
+                            fee: +this.fee
+                        }).then(res => {
+                            console.log(res)
+                        })
+                    },
+                    // 选择单选选项
+                    chooseItem(item) {
+                        this.rule = item.val
+                        $post('/allocation_rule', {
+                            allocation_rule: this.rule
+                        }).then(res => {
+                            console.log(res)
+                        })
+                    },
+                    // 切换switch
+                    switchToggle() {
+                        this.isSorting = !this.isSorting
+                        $post('/sort', {
+                            sort_switch: this.isSorting
+                        }).then(res => {
+                            console.log(res)
+                        })
+                    },
+                    // 点击编辑按钮
+                    editHandle(item, index) {
+                        item.isEditing = true
+                        this.tableData.splice(index, 1, item)
+                        this.$nextTick(() => {
+                            this.$refs.ipt[0].focus()
+                        })
+                    },
+                    // 点击保存按钮
+                    saveHandle(item, index) {
+                        delete item.isEditing
+                        console.log(item)
+                        this.tableData.splice(index, 1, item)
+                        $post('/capacity', {
+                            orderer: item.orderer,
+                            capacity: +item.capacity
+                        }).then(res => {
+                            console.log(res)
+                        })
+                    },
+                    getList() {
+                        console.log('获取列表数据')
+                    },
+                    resetTimer() {
+                        if(this.timer) clearInterval(this.timer)
+                        this.timer = setInterval(() => {
+                            this.getList()
+                        }, this.second)
+                    },
+                    // 定时添加日志，日志加在最前面
+                    getLogs() {
+                        setInterval(() => {
+                            this.logs.unshift({
+                                content: new Date() + '这是日志这是日志这是日志这是日志这是日志这是日志这是日志这是日志这是日志这是日志这是日志这是日志这是日志这是日志这是日志这是日志这是日志这是日志这是日志这是日志这是日志这是日志这是日志这是日志'
+                            })
+                        }, 2000)
+                    }
+                },
+                mounted() {
+                    this.init()
+                }
+            })
+        })()
+    </script>
+</body>
+</html>
