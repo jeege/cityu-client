@@ -81,6 +81,7 @@
         .table table *{
             text-align: center;
         }
+        .table table thead tr th,
         .table table tbody tr td{
             font-size: 14px;
             width: 100px;
@@ -90,6 +91,7 @@
             box-sizing: border-box;
         }
         .table table tbody tr td a {
+            cursor: pointer;
             display: block;
             text-decoration: none;
             color: #333;
@@ -142,7 +144,7 @@
                         <th>name</th>
                         <th>capacity</th>
                         <th>fee reward</th>
-                        <th></th>
+                        <th>operation</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -155,7 +157,7 @@
                             <input ref="ipt" v-else type="text" v-model="item.capacity" @keydown.enter="saveHandle(item, index)">
                         </td>
                         <td>
-                            <div>{{ item.fee }}</div>
+                            <div>{{ item.fee_reward }}</div>
                         </td>
                         <td>
                             <a v-if="!item.isEditing" @click="editHandle(item, index)">修改</a>
@@ -171,8 +173,9 @@
     </div>
     <script>
         (function(){
+            const apiUrl = 'http://45.76.98.80'
             const $post = (url, data) => {
-                return axios.post(url, data).catch(err => {
+                return axios.post(`${apiUrl}${url}`, data).catch(err => {
                     console.error(err)
                 })
             }
@@ -187,21 +190,7 @@
                         {val: 1, txt: 'equal allocation'},
                         {val: 0, txt: 'effort-based allocation'},
                     ],
-                    tableData: [
-                        {
-                            orderer: 'orderer1',
-                            capacity: 100,
-                            fee: 100
-                        },{
-                            orderer: 'orderer2',
-                            capacity: 100,
-                            fee: 100
-                        },{
-                            orderer: 'orderer3',
-                            capacity: 100,
-                            fee: 100
-                        }
-                    ],
+                    tableData: [],
                     logs: [],
                     timer: null, // 定时器
                 },
@@ -221,7 +210,7 @@
                     // 选择单选选项
                     chooseItem(item) {
                         this.rule = item.val
-                        $post('/allocation_rule', {
+                        $post('/allocation', {
                             allocation_rule: this.rule
                         }).then(res => {
                             console.log(res)
@@ -257,7 +246,11 @@
                         })
                     },
                     getList() {
-                        console.log('获取列表数据')
+                        axios.get(`${apiUrl}/orderers`).then((res) => {
+                            if(res.data.msg === 'operator success') {
+                                this.tableData = res.data.data.lists
+                            }
+                        })
                     },
                     resetTimer() {
                         if(this.timer) clearInterval(this.timer)
