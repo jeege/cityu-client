@@ -134,7 +134,7 @@
             </div>
         </div>
         <div style="margin-top: 40px">
-            Frequency of Request(ms)：<input type="text" v-model.number="second"> <button @click="resetTimer">确认</button>
+            Frequency of Request(ms)：<input type="text" v-model.number="second"> <button @click="resetTimer">ok</button>
         </div>
         <div class="table">
             <p>Ordering service capacity</p>
@@ -160,8 +160,8 @@
                             <div>{{ item.fee_reward }}</div>
                         </td>
                         <td>
-                            <a v-if="!item.isEditing" @click="editHandle(item, index)">修改</a>
-                            <a v-else @click="saveHandle(item, index)">保存</a>
+                            <a v-if="!item.isEditing" @click="editHandle(item, index)">edit</a>
+                            <a v-else @click="saveHandle(item, index)">save</a>
                         </td>
                     </tr>
                 </tbody>
@@ -178,6 +178,16 @@
                 return axios.post(`${apiUrl}${url}`, data).catch(err => {
                     console.error(err)
                 })
+            }
+            Array.prototype.findItemAndIndex = function(fn) {
+                let _index = -1
+                const _item = this.find((item, index) => {
+                    if(fn(item, index)) {
+                        _index = index
+                        return true
+                    }
+                })
+                return [_item, _index]
             }
             const app = new Vue({
                 el: '#J_app',
@@ -229,6 +239,12 @@
                     // 点击编辑按钮
                     editHandle(item, index) {
                         this.clearTimer()
+                        const [isEditingItem, isEditingIndex] = this.tableData.findItemAndIndex((item) => item.isEditing == true)
+                        if(isEditingItem) {
+                            this.saveHandle(isEditingItem, isEditingIndex, () => {
+                                this.clearTimer()
+                            })
+                        }
                         item.isEditing = true
                         this.tableData.splice(index, 1, item)
                         this.$nextTick(() => {
@@ -236,16 +252,15 @@
                         })
                     },
                     // 点击保存按钮
-                    saveHandle(item, index) {
+                    saveHandle(item, index, cb) {
                         delete item.isEditing
-                        console.log(item)
                         this.tableData.splice(index, 1, item)
                         $post('/capacity', {
                             orderer: item.orderer,
                             capacity: +item.capacity
                         }).then(res => {
-                            console.log(res)
                             this.resetTimer()
+                            if (cb) cb()
                         })
                     },
                     getList() {
