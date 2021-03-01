@@ -228,6 +228,7 @@
                     },
                     // 点击编辑按钮
                     editHandle(item, index) {
+                        this.clearTimer()
                         item.isEditing = true
                         this.tableData.splice(index, 1, item)
                         this.$nextTick(() => {
@@ -244,6 +245,7 @@
                             capacity: +item.capacity
                         }).then(res => {
                             console.log(res)
+                            this.resetTimer()
                         })
                     },
                     getList() {
@@ -253,8 +255,11 @@
                             }
                         })
                     },
-                    resetTimer() {
+                    clearTimer () {
                         if(this.timer) clearInterval(this.timer)
+                    },
+                    resetTimer() {
+                        this.clearTimer()
                         this.timer = setInterval(() => {
                             this.getList()
                         }, this.second)
